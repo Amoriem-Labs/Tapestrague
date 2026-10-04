@@ -93,8 +93,9 @@ internal sealed class OnboardingReadmeWindow : EditorWindow
                 EditorGUILayout.LabelField(
                     "2. Find the name sprite you want to add in your OS File Explorer.\n\n" +
                     "3. Drag the name sprite from the File Explorer into the Unity editor and drop it onto/into the Collaborators folder.\n\n" +
-                    "4. Add (GitHub Desktop automatically adds it) and commit the changes to your branch.\n" +
-                    "    • The commit message should be “upload name sprite ” + your name, e.g., \"upload name sprite Zhongye\".\n\n" +
+                    "4. Add the new file (GitHub Desktop automatically adds it) and commit the changes to your branch.\n" +
+                    "    • The commit message should be “upload name sprite ” + your name, e.g., \"upload name sprite Zhongye\".\n" +
+                    "    • Please confirm that the sprite file and its .meta file are the only modifications you have made.\n\n" +
                     "5. Push the branch to GitHub.\n\n" +
                     "6. Open a pull request into main. There should be a button \"make pull request\" in your GitHub Desktop.\n\n" +
                     "7. You are all set.",
