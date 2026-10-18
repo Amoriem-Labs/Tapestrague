@@ -103,7 +103,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: nathan-logo-860-278_0
+      name: nathan
       rect:
         serializedVersion: 2
         x: 26
@@ -111,7 +111,7 @@ TextureImporter:
         width: 542
         height: 209
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -133,7 +133,7 @@ TextureImporter:
         width: 66
         height: 20
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -150,7 +150,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 565f5fa8698db2c45a04e4a4ef18407c
     internalID: 0
     vertices: []
     indices: 
@@ -160,7 +160,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      nathan-logo-860-278_0: -6346295032779447825
+      nathan: -6346295032779447825
       nathan-logo-860-278_1: -7234671375359597781
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
