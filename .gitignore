@@ -45,6 +45,8 @@
 # Visual Studio cache directory
 .vs/
 
+# Editor specific ignores
+.vscode/
 # Gradle cache directory
 .gradle/
 
