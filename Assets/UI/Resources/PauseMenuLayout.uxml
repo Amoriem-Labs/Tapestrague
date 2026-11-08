@@ -1,0 +1,21 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="PauseMenuStyle.uss" />
+    <ui:VisualElement name="pause-overlay" class="overlay">
+        <ui:VisualElement class="card">
+            <ui:Label text="T A P E S T R A G U E" class="brand" />
+            <ui:VisualElement class="rule" />
+            <ui:Label text="A moment of rest" class="title" />
+            <ui:Label text="Your story will be here when you return." class="subtitle" />
+            <ui:Button name="resume" text="Resume journey" class="menu-button primary" />
+            <ui:Button name="main-menu" text="Main menu" class="menu-button" />
+            <ui:VisualElement class="volume-heading">
+                <ui:Label text="MASTER VOLUME" class="volume-label" />
+                <ui:Label name="volume-value" text="100%" class="volume-value" />
+            </ui:VisualElement>
+            <ui:Slider name="volume" low-value="0" high-value="1" value="1" label="" tooltip="Master volume: A to lower, D to raise" class="volume-slider" />
+            <ui:Button name="quit" text="Quit game" class="menu-button quit" />
+            <ui:Label name="status" text="" class="status" />
+            <ui:Label text="W / S  MOVE    A / D  VOLUME    SPACE  SELECT" class="hint" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
