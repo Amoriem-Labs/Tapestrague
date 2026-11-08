@@ -1,163 +1,155 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
+// Author: Nathan Burns
+// Controls the four-part clock puzzle in First_Puzzle.
+// The parts are ordered from the outer ring to the inner disc.
+// It also should be as intereactable as possible - ie it can work from Unity 
 public sealed class CompassPuzzle : MonoBehaviour
 {
-    public enum DoorOpeningMethod
-    {
-        Slide,
-        Swing
-    }
-
-    [System.Serializable]
-    private class CompassPart
-    {
-        public string label;
-
-        [Tooltip("Drag this compass layer's RectTransform here.")]
-        public RectTransform image;
-
-        [Tooltip("Distance from the compass center where this layer starts. 0 = center, 1 = outer edge.")]
-        [Range(0f, 1f)] public float innerClickRadius;
-
-        [Tooltip("Distance from the compass center where this layer ends. 0 = center, 1 = outer edge.")]
-        [Range(0f, 1f)] public float outerClickRadius = 1f;
-
-        [Tooltip("How far this part turns for each right-click. Positive values turn counter-clockwise.")]
-        public float degreesPerRightClick = 90f;
-
-        [Tooltip("The Z rotation, in degrees, that represents this part being correctly aligned.")]
-        public float solvedZAngle = 0f;
-    }
-
-    [Header("Compass UI")]
-    [Tooltip("An empty RectTransform centered on the compass and sized to its outer edge.")]
+    [Header("Clock Parts (outer to inner)")]
     [SerializeField] private RectTransform compassArea;
+    [SerializeField] private Image[] clockParts = new Image[4];
+    [SerializeField] private float[] startingZAngles = { 90f, 180f, 270f, 90f };
+    [SerializeField] private float[] solvedZAngles = { 0f, 0f, 0f, 0f };
 
-    [Tooltip("Keep these ordered from outermost ring to innermost piece.")]
-    [SerializeField] private CompassPart[] compassParts =
-    {
-        new CompassPart
-        {
-            label = "Outer Ring",
-            innerClickRadius = 0.72f,
-            outerClickRadius = 1f
-        },
-        new CompassPart
-        {
-            label = "Middle Ring 1",
-            innerClickRadius = 0.48f,
-            outerClickRadius = 0.72f
-        },
-        new CompassPart
-        {
-            label = "Middle Ring 2",
-            innerClickRadius = 0.25f,
-            outerClickRadius = 0.48f
-        },
-        new CompassPart
-        {
-            label = "Inner Piece",
-            innerClickRadius = 0f,
-            outerClickRadius = 0.25f
-        }
-    };
+    [Header("Click Zones (outer to inner)")]
+    [SerializeField] private float[] innerClickRadii = { 0.60f, 0.42f, 0.24f, 0f };
+    [SerializeField] private float[] outerClickRadii = { 1f, 0.60f, 0.42f, 0.24f };
 
-    [Header("Solved State")]
+    [Header("Rotation")]
+    [SerializeField, Min(1f)] private float rotationDegreesPerSecond = 180f;
+    [SerializeField, Min(0f)] private float alignmentSnapDegrees = 3f;
     [SerializeField, Min(0f)] private float alignmentTolerance = 0.5f;
 
-    [Tooltip("Assign the object labelled Door here.")]
-    [SerializeField] private Transform door;
+    [Header("Completion")]
+    [SerializeField] private AudioSource alignmentAudioSource;
+    [SerializeField] private RectTransform door;
+    [SerializeField] private float doorRiseDistance = 250f;
+    [SerializeField, Min(0.01f)] private float doorRiseDuration = 0.75f;
 
-    [SerializeField] private DoorOpeningMethod doorOpeningMethod = DoorOpeningMethod.Slide;
+    private Canvas parentCanvas;
+    private bool[] partLocked;
+    private bool[] mustLeaveSolvedAngle;
+    private Vector2 closedDoorPosition;
+    private int heldPartIndex = -1;
+    private bool unlocked;
 
-    [Tooltip("For Slide: movement relative to the door's parent. Example: (0, 3, 0).")]
-    [SerializeField] private Vector3 doorLocalSlideOffset = new Vector3(0f, 3f, 0f);
-
-    [Tooltip("For Swing: rotation relative to the door's starting rotation. Use Y for most 3D doors, Z for 2D doors.")]
-    [SerializeField] private Vector3 doorLocalSwingEuler = new Vector3(0f, 90f, 0f);
-
-    [SerializeField, Min(0f)] private float doorOpenDuration = 1f;
-
-    [Header("Sound")]
-    [Tooltip("Assign an AudioSource with your downloaded solved-sound clip.")]
-    [SerializeField] private AudioSource solvedAudioSource;
-
-    private bool solved;
-    private Vector3 closedDoorLocalPosition;
-    private Quaternion closedDoorLocalRotation;
+    public bool IsUnlocked => unlocked;
+    public int AlignmentSoundPlayCount { get; private set; }
 
     private void Awake()
     {
-        if (door != null)
-        {
-            closedDoorLocalPosition = door.localPosition;
-            closedDoorLocalRotation = door.localRotation;
-        }
+        // called at the start to set the clock to the designated degrees 
+        // as specified in the unity editor. Made to be flexible and not hardcoded 
+        ResetPuzzle();
     }
 
     private void Update()
     {
-        if (solved || !Input.GetMouseButtonDown(1))
+        if (unlocked || Mouse.current == null)
             return;
 
-        if (!TryGetClickedCompassPart(out CompassPart clickedPart))
+        if (Mouse.current.leftButton.wasReleasedThisFrame)
+        {
+            heldPartIndex = -1;
             return;
+        }
 
-        clickedPart.image.Rotate(
-            Vector3.forward,
-            clickedPart.degreesPerRightClick,
-            Space.Self);
+        if (Mouse.current.leftButton.wasPressedThisFrame)
+            TryRotatePartAtScreenPosition(Mouse.current.position.ReadValue());
 
-        if (AllCompassPartsAreAligned())
-            SolvePuzzle();
+        if (Mouse.current.leftButton.isPressed && heldPartIndex >= 0)
+            RotateHeldPart(Time.deltaTime);
     }
 
-    private bool TryGetClickedCompassPart(out CompassPart clickedPart)
+    // if the player presses on the clock
+    // A previously solved part can also be unlcoked 
+    // so the player can turn it again before the whole puzzle is done
+    // I included the ability to keep turning in case we want to remove the sound 
+    // until only after it all was done
+    public bool TryRotatePart(int partIndex)
     {
-        clickedPart = null;
-
-        if (compassArea == null)
+        if (unlocked || !HasValidPartIndex(partIndex))
             return false;
 
-        Canvas canvas = compassArea.GetComponentInParent<Canvas>();
-        Camera uiCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
-            ? canvas.worldCamera
-            : null;
+        mustLeaveSolvedAngle[partIndex] = partLocked[partIndex];
+        partLocked[partIndex] = false;
+        heldPartIndex = partIndex;
+        return true;
+    }
 
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                compassArea,
-                Input.mousePosition,
-                uiCamera,
-                out Vector2 localMousePosition))
+    
+    // Applies the same hit testing used by a real mouse click, then starts
+    // holding the selected part without overlapping UI images competing for pointer events
+    public bool TryRotatePartAtScreenPosition(Vector2 screenPosition)
+    {
+        return TryGetClockPartAt(screenPosition, out int partIndex) && TryRotatePart(partIndex);
+    }
+
+    // What is called at the beginning of awake()
+    public void ResetPuzzle()
+    {
+        parentCanvas = compassArea != null ? compassArea.GetComponentInParent<Canvas>() : null;
+
+        int partCount = clockParts == null ? 0 : clockParts.Length;
+        partLocked = new bool[partCount];
+        mustLeaveSolvedAngle = new bool[partCount];
+        heldPartIndex = -1;
+        unlocked = false;
+        AlignmentSoundPlayCount = 0;
+
+        for (int index = 0; index < partCount; index++)
+        {
+            if (clockParts[index] == null)
+                continue;
+
+            clockParts[index].rectTransform.localRotation = Quaternion.Euler(0f, 0f, GetValue(startingZAngles, index, 0f));
+        }
+
+        if (door != null)
+            closedDoorPosition = door.anchoredPosition;
+    }
+
+    // just checks to make sure the clock parts are working as intended
+    private bool TryGetClockPartAt(Vector2 screenPosition, out int partIndex)
+    {
+        partIndex = -1;
+
+        if (compassArea == null || clockParts == null || clockParts.Length == 0)
+            return false;
+
+        Camera eventCamera = parentCanvas != null && parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay ? parentCanvas.worldCamera : null;
+
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(compassArea, screenPosition, eventCamera, out Vector2 localPoint))
         {
             return false;
         }
 
         Rect rect = compassArea.rect;
+        float halfSmallestDimension = Mathf.Min(rect.width, rect.height) * 0.5f;
 
-        if (rect.width <= 0f || rect.height <= 0f)
+        if (halfSmallestDimension <= 0f)
             return false;
 
-        // Makes 1.0 equal the outer circular edge of the compass.
-        Vector2 normalizedFromCenter = new Vector2(
-            (localMousePosition.x - rect.center.x) / (rect.width * 0.5f),
-            (localMousePosition.y - rect.center.y) / (rect.height * 0.5f));
+        float normalizedRadius = (localPoint - rect.center).magnitude / halfSmallestDimension;
 
-        float clickRadius = normalizedFromCenter.magnitude;
-
-        if (clickRadius > 1f)
+        if (normalizedRadius > 1f)
             return false;
 
-        foreach (CompassPart part in compassParts)
+        for (int index = 0; index < clockParts.Length; index++)
         {
-            if (part == null || part.image == null)
+            if (clockParts[index] == null)
                 continue;
 
-            if (clickRadius >= part.innerClickRadius &&
-                clickRadius <= part.outerClickRadius)
+            float innerRadius = GetValue(innerClickRadii, index, 0f);
+            float outerRadius = GetValue(outerClickRadii, index, 0f);
+
+            if (normalizedRadius >= innerRadius && normalizedRadius <= outerRadius)
             {
-                clickedPart = part;
+                partIndex = index;
                 return true;
             }
         }
@@ -165,83 +157,123 @@ public sealed class CompassPuzzle : MonoBehaviour
         return false;
     }
 
-    private bool AllCompassPartsAreAligned()
+
+    private void RotateHeldPart(float deltaTime)
     {
-        foreach (CompassPart part in compassParts)
+        if (!HasValidPartIndex(heldPartIndex))
         {
-            if (part == null || part.image == null)
-                return false;
+            heldPartIndex = -1;
+            return;
+        }
 
-            float difference = Mathf.Abs(
-                Mathf.DeltaAngle(part.image.localEulerAngles.z, part.solvedZAngle));
+        RectTransform partTransform = clockParts[heldPartIndex].rectTransform;
+        float currentAngle = partTransform.localEulerAngles.z;
+        float solvedAngle = GetValue(solvedZAngles, heldPartIndex, 0f);
+        float degreesUntilSolved = Mathf.Repeat(solvedAngle - currentAngle, 360f);
+        float rotationThisFrame = rotationDegreesPerSecond * Mathf.Max(0f, deltaTime);
 
-            if (difference > alignmentTolerance)
+        // A part being picked up from its exact solved angle must first leave that angle
+        //  otherwise its zero-degree distance would snap it straight
+        // back into place before the player sees it move.
+        if (mustLeaveSolvedAngle[heldPartIndex])
+        {
+            mustLeaveSolvedAngle[heldPartIndex] = false;
+            partTransform.localRotation = Quaternion.Euler(0f, 0f, currentAngle + rotationThisFrame);
+            return;
+        }
+
+        // Snap precisely to the answer instead of requiring frame-perfect input. 
+        // this was the solution I found to stop the angles from being too precise 
+        // otherwise I would like "finish" the puzzle but not open the door
+        if (degreesUntilSolved <= rotationThisFrame + alignmentSnapDegrees)
+        {
+            partTransform.localRotation = Quaternion.Euler(0f, 0f, solvedAngle);
+            partLocked[heldPartIndex] = true;
+            heldPartIndex = -1;
+            PlayAlignmentSound();
+
+            if (AreAllPartsAligned())
+            {
+                unlocked = true;
+                StartCoroutine(RaiseDoor());
+            }
+
+            return;
+        }
+        partTransform.localRotation = Quaternion.Euler(0f, 0f, currentAngle + rotationThisFrame);
+    }
+
+    // May delete this one later -> checks individual parts instead of checking the whole
+    // useful for debugging the raw pieces since I can't tell NESW
+    private bool IsPartAligned(int partIndex)
+    {
+        if (!HasValidPartIndex(partIndex))
+            return false;
+
+        float currentAngle = clockParts[partIndex].rectTransform.localEulerAngles.z;
+        float solvedAngle = GetValue(solvedZAngles, partIndex, 0f);
+        return Mathf.Abs(Mathf.DeltaAngle(currentAngle, solvedAngle)) <= alignmentTolerance;
+    }
+
+    // boolean that checks if the clock parts are aligned. Should be called after every movement of the  clock
+    private bool AreAllPartsAligned()
+    {
+        if (clockParts == null || clockParts.Length != 4)
+            return false;
+
+        for (int index = 0; index < clockParts.Length; index++)
+        {
+            if (partLocked == null || !partLocked[index] || !IsPartAligned(index))
                 return false;
         }
 
         return true;
     }
 
-    private void SolvePuzzle()
-    {
-        solved = true;
-
-        if (solvedAudioSource != null && solvedAudioSource.clip != null)
-            solvedAudioSource.Play();
-
-        StartCoroutine(OpenDoor());
-    }
-
-    private IEnumerator OpenDoor()
+    // function to move the door up so the player can move. May delete later if other person 
+    // already built function for door
+    private IEnumerator RaiseDoor()
     {
         if (door == null)
             yield break;
 
-        Vector3 openPosition = closedDoorLocalPosition + doorLocalSlideOffset;
-        Quaternion openRotation =
-            closedDoorLocalRotation * Quaternion.Euler(doorLocalSwingEuler);
-
-        if (doorOpenDuration <= 0f)
-        {
-            ApplyDoorState(openPosition, openRotation, 1f);
-            yield break;
-        }
-
+        Vector2 openDoorPosition = closedDoorPosition + Vector2.up * doorRiseDistance;
         float elapsed = 0f;
 
-        while (elapsed < doorOpenDuration)
+        while (elapsed < doorRiseDuration)
         {
             elapsed += Time.deltaTime;
-
-            float progress = Mathf.Clamp01(elapsed / doorOpenDuration);
+            float progress = Mathf.Clamp01(elapsed / doorRiseDuration);
             float easedProgress = progress * progress * (3f - 2f * progress);
-
-            ApplyDoorState(openPosition, openRotation, easedProgress);
-
+            door.anchoredPosition = Vector2.Lerp(closedDoorPosition, openDoorPosition, easedProgress);
             yield return null;
         }
 
-        ApplyDoorState(openPosition, openRotation, 1f);
+        door.anchoredPosition = openDoorPosition;
     }
 
-    private void ApplyDoorState(
-        Vector3 openPosition,
-        Quaternion openRotation,
-        float progress)
+    // funcion that plays the sound
+    private void PlayAlignmentSound()
     {
-        if (doorOpeningMethod == DoorOpeningMethod.Slide)
-        {
-            door.localPosition = Vector3.Lerp(
-                closedDoorLocalPosition,
-                openPosition,
-                progress);
-        }
-        else
-        {
-            door.localRotation = Quaternion.Slerp(
-                closedDoorLocalRotation,
-                openRotation,
-                progress);
-        }
+        if (alignmentAudioSource == null || alignmentAudioSource.clip == null)
+            return;
+
+        alignmentAudioSource.PlayOneShot(alignmentAudioSource.clip);
+        AlignmentSoundPlayCount++;
+    }
+
+    private bool HasValidPartIndex(int partIndex)
+    {
+        return clockParts != null &&
+               partIndex >= 0 &&
+               partIndex < clockParts.Length &&
+               clockParts[partIndex] != null &&
+               partLocked != null &&
+               mustLeaveSolvedAngle != null;
+    }
+
+    private static float GetValue(float[] values, int index, float fallback)
+    {
+        return values != null && index >= 0 && index < values.Length ? values[index] : fallback;
     }
 }
