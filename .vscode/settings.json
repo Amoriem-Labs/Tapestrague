@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "tapestrague.slnx"
+    "dotnet.defaultSolution": "Tapestrague.slnx"
 }
