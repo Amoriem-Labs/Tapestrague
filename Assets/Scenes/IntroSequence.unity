@@ -867,7 +867,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TempMovement
   moveSpeed: 8
-  jumpForce: 12
+  jumpForce: 9
   groundCheck: {fileID: 0}
   groundLayer:
     serializedVersion: 2
