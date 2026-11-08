@@ -15,7 +15,7 @@
             <ui:Slider name="volume" low-value="0" high-value="1" value="1" label="" tooltip="Master volume: A to lower, D to raise" class="volume-slider" />
             <ui:Button name="quit" text="Quit game" class="menu-button quit" />
             <ui:Label name="status" text="" class="status" />
-            <ui:Label text="W / S  MOVE    A / D  VOLUME    SPACE  SELECT" class="hint" />
+            <ui:Label text="W / S MOVE   A / D VOLUME   SPACE SELECT   ESC CLOSE" class="hint" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

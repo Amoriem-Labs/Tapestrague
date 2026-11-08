@@ -1,7 +1,7 @@
 PAUSE MENU
 
 Drag UI/Prefabs/PauseMenu.prefab into each gameplay scene, then save the scene.
-Keep its GameObject active: the UI starts hidden and Space opens it.
+Keep its GameObject active: the UI starts hidden and Esc opens/closes it.
 Resume also closes it. Quit exits a built game or stops Play mode in the Editor.
 
 Set Main Menu Scene on the prefab instance to your main-menu scene name/path,
@@ -20,4 +20,4 @@ mixed uGUI scenes should use their existing InputSystemUIInputModule.
 
 Edit appearance in Resources/PauseMenuLayout.uxml and PauseMenuStyle.uss.
 The prefab builds its UI document at runtime, so preview it in Play mode.
-W/S navigates controls; A/D lowers/raises a focused volume slider in 5% steps. Space activates the selected button (select Resume to close). Mouse clicks and dragging still work. Escape, Tab, Enter and arrow-key menu controls are disabled. These bindings apply to this menu; gameplay input is configured separately.
+W/S navigates controls; A/D lowers/raises a focused volume slider in 5% steps. Space activates the selected button (select Resume to close). Mouse clicks and dragging still work. Esc toggles the menu. Tab, Enter and arrow-key menu controls are disabled. These bindings apply to this menu; gameplay input is configured separately.

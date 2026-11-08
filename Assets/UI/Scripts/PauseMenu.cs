@@ -97,11 +97,12 @@ namespace Tapestrague.UI
         {
             var keyboard = Keyboard.current;
             if (keyboard == null || overlay == null) return;
-            if (!IsOpen)
+            if (keyboard.escapeKey.wasPressedThisFrame)
             {
-                if (keyboard.spaceKey.wasPressedThisFrame) SetOpen(true);
+                SetOpen(!IsOpen);
                 return;
             }
+            if (!IsOpen) return;
 
             int selected = FocusedControlIndex();
             if (keyboard.wKey.wasPressedThisFrame || keyboard.sKey.wasPressedThisFrame)
