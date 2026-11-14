@@ -18,10 +18,17 @@ public class DoorInteraction : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
+        var player = GameObject.FindGameObjectWithTag("Player");
         if (Keyboard.current.eKey.wasPressedThisFrame)
-        //other conditions (i.e. if player is close by) to be added
         {
-            animator.SetTrigger("open");
+            if ((player.transform.position - transform.position).sqrMagnitude < 25)
+            {
+                animator.SetTrigger("open");
+            } else
+            {
+                Debug.Log("can't open yet");
+            }
         }
     }
 }
