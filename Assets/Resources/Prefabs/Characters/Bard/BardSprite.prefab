@@ -462,7 +462,7 @@ GameObject:
   - component: {fileID: 6719585900347679032}
   - component: {fileID: 4446717375749701528}
   m_Layer: 0
-  m_Name: bard2
+  m_Name: BardSprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

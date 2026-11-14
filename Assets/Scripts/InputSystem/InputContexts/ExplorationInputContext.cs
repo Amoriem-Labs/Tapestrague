@@ -4,6 +4,8 @@ namespace InputSystem.InputContexts
 {
     public class ExplorationInputContext : MonoBehaviour, IInputContext
     {
+        [SerializeField] private KnightMovement _player;
+        
         // base context
         public int Priority => 10;
         // block all inputs
@@ -21,32 +23,25 @@ namespace InputSystem.InputContexts
 
         #region Input Context
 
-        public bool Handle(ActionEvent e)
-        {
+        public bool Handle(ActionEvent e) =>
             // only implement enabled inputs
-            switch (e.Action)
+            e.Action switch
             {
-                case GameAction.Move:
-                    return HandleMove(e);
-                case GameAction.Interact:
-                    return HandleInteract(e);
-                case GameAction.PointerPress:
-                    return HandlePointerPress(e);
-                default:
-                    break;
-            }
-
-            return false;
-        }
+                GameAction.Move => HandleMove(e),
+                GameAction.Interact => HandleInteract(e),
+                GameAction.PointerPress => HandlePointerPress(e),
+                _ => false
+            };
 
         private bool HandlePointerPress(ActionEvent actionEvent)
         {
-            if (actionEvent.Phase != Phase.Started) return false;
-            
-            var coll = Physics2D.OverlapPoint(actionEvent.PointerWorldPos);
-            if (!coll || !coll.TryGetComponent(out PuzzleInputContext puzzle)) return false;
-            
-            InputRouter.Push(puzzle);
+            // if (actionEvent.Phase != Phase.Started) return false;
+            //
+            // var coll = Physics2D.OverlapPoint(actionEvent.PointerWorldPos);
+            // if (!coll || !coll.TryGetComponent(out PuzzleInputContext puzzle)) return false;
+            //
+            // InputRouter.Push(puzzle);
+            Debug.Log("Pointer Click");
             return true;
         }
 
@@ -58,7 +53,7 @@ namespace InputSystem.InputContexts
 
         private bool HandleMove(ActionEvent actionEvent)
         {
-            Debug.Log($"Move: {actionEvent.Move}");
+            _player.HandleMoveInput(actionEvent.Move);
             return true;
         }
 
