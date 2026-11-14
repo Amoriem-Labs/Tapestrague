@@ -24,4 +24,9 @@ public class DoorInteraction : MonoBehaviour
             animator.SetTrigger("open");
         }
     }
+
+    public void OpenDoor()
+    {
+        animator.SetTrigger("open");
+    }
 }

@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
+
 // Author: Nathan Burns
 // Controls the four-part clock puzzle in First_Puzzle.
 // The parts are ordered from the outer ring to the inner disc.
@@ -37,6 +38,8 @@ public sealed class CompassPuzzle : MonoBehaviour
     private int heldPartIndex = -1;
     private bool unlocked;
 
+    private DoorInteraction doorInteraction;
+
     public bool IsUnlocked => unlocked;
     public int AlignmentSoundPlayCount { get; private set; }
 
@@ -45,6 +48,7 @@ public sealed class CompassPuzzle : MonoBehaviour
         // called at the start to set the clock to the designated degrees 
         // as specified in the unity editor. Made to be flexible and not hardcoded 
         ResetPuzzle();
+        doorInteraction = door.GetComponent<DoorInteraction>();
     }
 
     private void Update()
@@ -195,7 +199,7 @@ public sealed class CompassPuzzle : MonoBehaviour
             if (AreAllPartsAligned())
             {
                 unlocked = true;
-                StartCoroutine(RaiseDoor());
+                doorInteraction.OpenDoor();
             }
 
             return;
@@ -232,6 +236,7 @@ public sealed class CompassPuzzle : MonoBehaviour
 
     // function to move the door up so the player can move. May delete later if other person 
     // already built function for door
+    /*
     private IEnumerator RaiseDoor()
     {
         if (door == null)
@@ -251,6 +256,8 @@ public sealed class CompassPuzzle : MonoBehaviour
 
         door.anchoredPosition = openDoorPosition;
     }
+    */
+
 
     // funcion that plays the sound
     private void PlayAlignmentSound()
