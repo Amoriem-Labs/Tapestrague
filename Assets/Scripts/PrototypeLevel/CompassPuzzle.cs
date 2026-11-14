@@ -154,7 +154,9 @@ public sealed class CompassPuzzle : MonoBehaviour
             if (normalizedRadius >= innerRadius && normalizedRadius <= outerRadius)
             {
                 partIndex = index;
-                return true;
+                // fail if the part is already aligned
+                return !IsPartAligned(partIndex); 
+                // return true;
             }
         }
 
@@ -194,7 +196,8 @@ public sealed class CompassPuzzle : MonoBehaviour
             partTransform.localRotation = Quaternion.Euler(0f, 0f, solvedAngle);
             partLocked[heldPartIndex] = true;
             heldPartIndex = -1;
-            PlayAlignmentSound();
+            Debug.Log("Aligned");
+            // PlayAlignmentSound();
 
             if (AreAllPartsAligned())
             {
