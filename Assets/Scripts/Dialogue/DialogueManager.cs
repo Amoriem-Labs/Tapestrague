@@ -29,6 +29,8 @@ public class DialogueManager : MonoBehaviour
         public DialogueSpeaker Speaker;
     }
 
+    // TODO: let speakers active register/unregister themselves
+    //  instead of manually deciding speakers in the scene
     /// <summary>
     /// A list of DialogueSpeakers and their corresponding IDs.
     /// </summary>
@@ -161,6 +163,7 @@ public class DialogueManager : MonoBehaviour
     public void DisplayLine(DialogueLine line, DialogueSpeaker speaker, Action finishDisplayCallback = null) { DisplayLine(line, speaker, speaker.GetDialogueDisplayPosition(), speaker.transform, finishDisplayCallback); }
     public void DisplayLine(DialogueLine line, DialogueSpeaker speaker, Vector3 position, Transform parent = null, Action finishDisplayCallback = null)
     {
+        // TODO: use prefabs instead of composing one at runtime
         GameObject dialogueText = new GameObject(parent ? "Dialogue_" + parent.gameObject.name : "Dialogue");
         TextMeshPro text = dialogueText.AddComponent<TextMeshPro>();
         text.text = "";
@@ -168,6 +171,7 @@ public class DialogueManager : MonoBehaviour
         text.fontSize = speaker.GetFontSize();
         text.color = speaker.GetColor();
         text.alignment = TextAlignmentOptions.Center;
+        text.sortingLayerID = SortingLayer.NameToID("Player");
 
         dialogueText.transform.SetParent(parent ? parent : transform);
         dialogueText.transform.position = position;
