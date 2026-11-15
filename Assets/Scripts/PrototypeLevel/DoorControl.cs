@@ -9,6 +9,8 @@ namespace PrototypeLevel
         [SerializeField] private SpriteRenderer _doorSprite;
         private Collider2D _coll;
 
+        [SerializeField] private AudioSource _audioSource;
+        
         private void Awake()
         {
             _coll = GetComponent<Collider2D>();
@@ -26,6 +28,8 @@ namespace PrototypeLevel
         public void Interact()
         {
             Debug.Log("Demo Complete!");
+            _audioSource.Play();
+            
             // TODO: consider add a transition back to main screen
         }
     }

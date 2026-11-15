@@ -27,7 +27,7 @@ public class TestDialogueInteractable : MonoBehaviour
     //TODO: TESTING REMOVE:
     IEnumerator startTestDialogue()
     {
-        yield return new WaitForEndOfFrame();
+        yield return new WaitForSeconds(5);
         Debug.Log("START DIALOGUE");
         _dialoguePlayer.StartDialogueSequence();
     }
