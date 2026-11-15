@@ -5,10 +5,11 @@ namespace PuzzleSystem.PuzzleHandlers
 {
     public class PuzzleCameraFocus : MonoBehaviour, IPuzzleStartHandler, IPuzzleFinishHandler
     {
-        [SerializeField] private CinemachineCamera _puzzleCamera;
+        private CinemachineCamera _puzzleCamera;
 
         private void Awake()
         {
+            _puzzleCamera = GetComponentInChildren<CinemachineCamera>(includeInactive: true);
             _puzzleCamera?.gameObject.SetActive(false);
         }
 

@@ -53,8 +53,9 @@ namespace InputSystem.InputContexts
 
         private bool HandleInteract(ActionEvent actionEvent)
         {
-            Debug.Log("Interact");
-            return true;
+            if (actionEvent.Phase != Phase.Started) return false;
+            
+            return _player.TryInteract();
         }
 
         private bool HandleMove(ActionEvent actionEvent)
