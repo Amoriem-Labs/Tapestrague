@@ -205,6 +205,7 @@ GameObject:
   - component: {fileID: 742334294}
   - component: {fileID: 742334295}
   - component: {fileID: 742334296}
+  - component: {fileID: 742334297}
   m_Layer: 5
   m_Name: CompassArea
   m_TagString: Untagged
@@ -247,12 +248,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 298a90749a5835041af6e3d606a8dde1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CompassPuzzle
-  compassArea: {fileID: 742334294}
   clockParts:
-  - {fileID: 296357961}
-  - {fileID: 1720078183}
-  - {fileID: 1001938878}
-  - {fileID: 1541237690}
+  - {fileID: 296357960}
+  - {fileID: 1720078182}
+  - {fileID: 1001938877}
+  - {fileID: 1541237689}
   startingZAngles:
   - 90
   - 180
@@ -263,16 +263,6 @@ MonoBehaviour:
   - 0
   - 0
   - 0
-  innerClickRadii:
-  - 0.6
-  - 0.42
-  - 0.24
-  - 0
-  outerClickRadii:
-  - 1
-  - 0.6
-  - 0.42
-  - 0.24
   rotationDegreesPerSecond: 180
   alignmentSnapDegrees: 3
   alignmentTolerance: 0.5
@@ -377,6 +367,30 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &742334297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 742334293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b30d064f688142179891d9ba502ab84e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CompassPuzzleInput
+  puzzle: {fileID: 742334295}
+  compassArea: {fileID: 742334294}
+  innerClickRadii:
+  - 0.6
+  - 0.42
+  - 0.24
+  - 0
+  outerClickRadii:
+  - 1
+  - 0.6
+  - 0.42
+  - 0.24
 --- !u!1 &1001938876
 GameObject:
   m_ObjectHideFlags: 0
@@ -947,7 +961,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.000030518, y: 0}
+  m_AnchoredPosition: {x: 0.000030517578, y: 0}
   m_SizeDelta: {x: 270.1235, y: 264.3569}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1720078183

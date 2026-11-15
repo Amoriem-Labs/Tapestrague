@@ -1,24 +1,22 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 
 // Author: Nathan Burns
 // Controls the four-part clock puzzle in First_Puzzle.
 // The parts are ordered from the outer ring to the inner disc.
-// It also should be as intereactable as possible - ie it can work from Unity 
+// It also should be as intereactable as possible - ie it can work from Unity
+//
+// This component only owns the puzzle state: rotating the held part and detecting
+// when every part is aligned. Deciding which part the player is pointing at lives in
+// CompassPuzzleInput, which calls TryRotatePart / ReleasePart.
 public sealed class CompassPuzzle : MonoBehaviour
 {
     [Header("Clock Parts (outer to inner)")]
-    [SerializeField] private RectTransform compassArea;
-    [SerializeField] private Image[] clockParts = new Image[4];
+    [SerializeField] private Transform[] clockParts = new Transform[4];
     [SerializeField] private float[] startingZAngles = { 90f, 180f, 270f, 90f };
     [SerializeField] private float[] solvedZAngles = { 0f, 0f, 0f, 0f };
-
-    [Header("Click Zones (outer to inner)")]
-    [SerializeField] private float[] innerClickRadii = { 0.60f, 0.42f, 0.24f, 0f };
-    [SerializeField] private float[] outerClickRadii = { 1f, 0.60f, 0.42f, 0.24f };
 
     [Header("Rotation")]
     [SerializeField, Min(1f)] private float rotationDegreesPerSecond = 180f;
@@ -31,7 +29,6 @@ public sealed class CompassPuzzle : MonoBehaviour
     [SerializeField] private float doorRiseDistance = 250f;
     [SerializeField, Min(0.01f)] private float doorRiseDuration = 0.75f;
 
-    private Canvas parentCanvas;
     private bool[] partLocked;
     private bool[] mustLeaveSolvedAngle;
     private Vector2 closedDoorPosition;
@@ -41,38 +38,30 @@ public sealed class CompassPuzzle : MonoBehaviour
     private DoorInteraction doorInteraction;
 
     public bool IsUnlocked => unlocked;
+    public int PartCount => clockParts == null ? 0 : clockParts.Length;
+    public int HeldPartIndex => heldPartIndex;
     public int AlignmentSoundPlayCount { get; private set; }
 
     private void Awake()
     {
-        // called at the start to set the clock to the designated degrees 
-        // as specified in the unity editor. Made to be flexible and not hardcoded 
+        // called at the start to set the clock to the designated degrees
+        // as specified in the unity editor. Made to be flexible and not hardcoded
         ResetPuzzle();
         doorInteraction = door.GetComponent<DoorInteraction>();
     }
 
     private void Update()
     {
-        if (unlocked || Mouse.current == null)
+        if (unlocked || heldPartIndex < 0)
             return;
 
-        if (Mouse.current.leftButton.wasReleasedThisFrame)
-        {
-            heldPartIndex = -1;
-            return;
-        }
-
-        if (Mouse.current.leftButton.wasPressedThisFrame)
-            TryRotatePartAtScreenPosition(Mouse.current.position.ReadValue());
-
-        if (Mouse.current.leftButton.isPressed && heldPartIndex >= 0)
-            RotateHeldPart(Time.deltaTime);
+        RotateHeldPart(Time.deltaTime);
     }
 
     // if the player presses on the clock
-    // A previously solved part can also be unlcoked 
+    // A previously solved part can also be unlcoked
     // so the player can turn it again before the whole puzzle is done
-    // I included the ability to keep turning in case we want to remove the sound 
+    // I included the ability to keep turning in case we want to remove the sound
     // until only after it all was done
     public bool TryRotatePart(int partIndex)
     {
@@ -85,20 +74,16 @@ public sealed class CompassPuzzle : MonoBehaviour
         return true;
     }
 
-    
-    // Applies the same hit testing used by a real mouse click, then starts
-    // holding the selected part without overlapping UI images competing for pointer events
-    public bool TryRotatePartAtScreenPosition(Vector2 screenPosition)
+    // Stops rotating whichever part is currently held (e.g. the player let go)
+    public void ReleasePart()
     {
-        return TryGetClockPartAt(screenPosition, out int partIndex) && TryRotatePart(partIndex);
+        heldPartIndex = -1;
     }
 
     // What is called at the beginning of awake()
     public void ResetPuzzle()
     {
-        parentCanvas = compassArea != null ? compassArea.GetComponentInParent<Canvas>() : null;
-
-        int partCount = clockParts == null ? 0 : clockParts.Length;
+        int partCount = PartCount;
         partLocked = new bool[partCount];
         mustLeaveSolvedAngle = new bool[partCount];
         heldPartIndex = -1;
@@ -110,59 +95,12 @@ public sealed class CompassPuzzle : MonoBehaviour
             if (clockParts[index] == null)
                 continue;
 
-            clockParts[index].rectTransform.localRotation = Quaternion.Euler(0f, 0f, GetValue(startingZAngles, index, 0f));
+            GetPartTransform(index).localRotation = Quaternion.Euler(0f, 0f, GetValue(startingZAngles, index, 0f));
         }
 
         if (door != null)
             closedDoorPosition = door.anchoredPosition;
     }
-
-    // just checks to make sure the clock parts are working as intended
-    private bool TryGetClockPartAt(Vector2 screenPosition, out int partIndex)
-    {
-        partIndex = -1;
-
-        if (compassArea == null || clockParts == null || clockParts.Length == 0)
-            return false;
-
-        Camera eventCamera = parentCanvas != null && parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay ? parentCanvas.worldCamera : null;
-
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(compassArea, screenPosition, eventCamera, out Vector2 localPoint))
-        {
-            return false;
-        }
-
-        Rect rect = compassArea.rect;
-        float halfSmallestDimension = Mathf.Min(rect.width, rect.height) * 0.5f;
-
-        if (halfSmallestDimension <= 0f)
-            return false;
-
-        float normalizedRadius = (localPoint - rect.center).magnitude / halfSmallestDimension;
-
-        if (normalizedRadius > 1f)
-            return false;
-
-        for (int index = 0; index < clockParts.Length; index++)
-        {
-            if (clockParts[index] == null)
-                continue;
-
-            float innerRadius = GetValue(innerClickRadii, index, 0f);
-            float outerRadius = GetValue(outerClickRadii, index, 0f);
-
-            if (normalizedRadius >= innerRadius && normalizedRadius <= outerRadius)
-            {
-                partIndex = index;
-                // fail if the part is already aligned
-                return !IsPartAligned(partIndex); 
-                // return true;
-            }
-        }
-
-        return false;
-    }
-
 
     private void RotateHeldPart(float deltaTime)
     {
@@ -172,7 +110,7 @@ public sealed class CompassPuzzle : MonoBehaviour
             return;
         }
 
-        RectTransform partTransform = clockParts[heldPartIndex].rectTransform;
+        Transform partTransform = GetPartTransform(heldPartIndex);
         float currentAngle = partTransform.localEulerAngles.z;
         float solvedAngle = GetValue(solvedZAngles, heldPartIndex, 0f);
         float degreesUntilSolved = Mathf.Repeat(solvedAngle - currentAngle, 360f);
@@ -188,8 +126,8 @@ public sealed class CompassPuzzle : MonoBehaviour
             return;
         }
 
-        // Snap precisely to the answer instead of requiring frame-perfect input. 
-        // this was the solution I found to stop the angles from being too precise 
+        // Snap precisely to the answer instead of requiring frame-perfect input.
+        // this was the solution I found to stop the angles from being too precise
         // otherwise I would like "finish" the puzzle but not open the door
         if (degreesUntilSolved <= rotationThisFrame + alignmentSnapDegrees)
         {
@@ -212,12 +150,12 @@ public sealed class CompassPuzzle : MonoBehaviour
 
     // May delete this one later -> checks individual parts instead of checking the whole
     // useful for debugging the raw pieces since I can't tell NESW
-    private bool IsPartAligned(int partIndex)
+    public bool IsPartAligned(int partIndex)
     {
         if (!HasValidPartIndex(partIndex))
             return false;
 
-        float currentAngle = clockParts[partIndex].rectTransform.localEulerAngles.z;
+        float currentAngle = GetPartTransform(partIndex).localEulerAngles.z;
         float solvedAngle = GetValue(solvedZAngles, partIndex, 0f);
         return Mathf.Abs(Mathf.DeltaAngle(currentAngle, solvedAngle)) <= alignmentTolerance;
     }
@@ -237,7 +175,7 @@ public sealed class CompassPuzzle : MonoBehaviour
         return true;
     }
 
-    // function to move the door up so the player can move. May delete later if other person 
+    // function to move the door up so the player can move. May delete later if other person
     // already built function for door
     /*
     private IEnumerator RaiseDoor()
@@ -270,6 +208,13 @@ public sealed class CompassPuzzle : MonoBehaviour
 
         alignmentAudioSource.PlayOneShot(alignmentAudioSource.clip);
         AlignmentSoundPlayCount++;
+    }
+
+    // The only place that cares what a clock part is made of. Rotation works on the
+    // Transform, so swapping Image for SpriteRenderer only needs the array type changed.
+    private Transform GetPartTransform(int partIndex)
+    {
+        return clockParts[partIndex].transform;
     }
 
     private bool HasValidPartIndex(int partIndex)
