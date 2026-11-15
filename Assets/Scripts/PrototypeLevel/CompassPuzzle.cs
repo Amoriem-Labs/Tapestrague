@@ -1,5 +1,10 @@
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using InputSystem.InputContexts;
+using PuzzleSystem;
 using UnityEngine;
+using UnityEngine.InputSystem.iOS;
 using UnityEngine.UI;
 
 
@@ -11,12 +16,13 @@ using UnityEngine.UI;
 // This component only owns the puzzle state: rotating the held part and detecting
 // when every part is aligned. Deciding which part the player is pointing at lives in
 // CompassPuzzleInput, which calls TryRotatePart / ReleasePart.
-public sealed class CompassPuzzle : MonoBehaviour
+public sealed class CompassPuzzle : MonoBehaviour, IExplorationClickable
 {
     [Header("Clock Parts (outer to inner)")]
     [SerializeField] private Transform[] clockParts = new Transform[4];
     [SerializeField] private float[] startingZAngles = { 90f, 180f, 270f, 90f };
     [SerializeField] private float[] solvedZAngles = { 0f, 0f, 0f, 0f };
+    private List<float> _radii = new List<float>();
 
     [Header("Rotation")]
     [SerializeField, Min(1f)] private float rotationDegreesPerSecond = 180f;
@@ -34,8 +40,11 @@ public sealed class CompassPuzzle : MonoBehaviour
     private Vector2 closedDoorPosition;
     private int heldPartIndex = -1;
     private bool unlocked;
+    private IPuzzleInitializeHandler[] _puzzleInitializeHandlers;
+    private IPuzzleStartHandler[] _startHandlers;
+    private IPuzzleFinishHandler[] _finishHandlers;
 
-    private DoorInteraction doorInteraction;
+    // private DoorInteraction doorInteraction;
 
     public bool IsUnlocked => unlocked;
     public int PartCount => clockParts == null ? 0 : clockParts.Length;
@@ -44,11 +53,22 @@ public sealed class CompassPuzzle : MonoBehaviour
 
     private void Awake()
     {
-        // called at the start to set the clock to the designated degrees
-        // as specified in the unity editor. Made to be flexible and not hardcoded
-        ResetPuzzle();
-        doorInteraction = door.GetComponent<DoorInteraction>();
+        InitializePuzzle();
+        // // called at the start to set the clock to the designated degrees
+        // // as specified in the unity editor. Made to be flexible and not hardcoded
+        // ResetPuzzle();
+        // // doorInteraction = door.GetComponent<DoorInteraction>();
+
+        _radii = clockParts.Select(c =>
+        {
+            var sprite = c.GetComponent<SpriteRenderer>();
+            Vector2 localSize = sprite.sprite.bounds.size;
+            Vector3 scale = sprite.transform.lossyScale;
+            // average radius
+            return (localSize.x * scale.x + localSize.y * scale.y) / 4;
+        }).ToList();
     }
+
 
     private void Update()
     {
@@ -58,6 +78,21 @@ public sealed class CompassPuzzle : MonoBehaviour
         RotateHeldPart(Time.deltaTime);
     }
 
+    #region Input Handling
+
+    public int TryGetPartIndexAtWorldPosition(Vector3 worldPosition)
+    {
+        var offset = worldPosition - transform.position;
+        var dist = offset.magnitude;
+        for (int i = 0; i < _radii.Count; i++)
+        {
+            var radius = _radii[i];
+            // click point outside radius, -1 if outside and disk
+            if (radius < dist) return i - 1;
+        }
+
+        return _radii.Count - 1;
+    }
     // if the player presses on the clock
     // A previously solved part can also be unlcoked
     // so the player can turn it again before the whole puzzle is done
@@ -80,8 +115,28 @@ public sealed class CompassPuzzle : MonoBehaviour
         heldPartIndex = -1;
     }
 
+    #endregion
+
+    #region Generic Puzzle Logic
+
+    private void InitializePuzzle()
+    {
+        _puzzleInitializeHandlers = GetComponentsInChildren<IPuzzleInitializeHandler>();
+        _startHandlers = GetComponentsInChildren<IPuzzleStartHandler>();
+        _finishHandlers = GetComponentsInChildren<IPuzzleFinishHandler>();
+        
+        // TODO: shouldn't reset everytime the puzzle is initialized
+        //  load from player save in the future
+        ResetPuzzle();
+        
+        foreach (var handler in _puzzleInitializeHandlers)
+        {
+            handler.OnPuzzleInitialize(IsUnlocked);
+        }
+    }
+    
     // What is called at the beginning of awake()
-    public void ResetPuzzle()
+    private void ResetPuzzle()
     {
         int partCount = PartCount;
         partLocked = new bool[partCount];
@@ -97,10 +152,37 @@ public sealed class CompassPuzzle : MonoBehaviour
 
             GetPartTransform(index).localRotation = Quaternion.Euler(0f, 0f, GetValue(startingZAngles, index, 0f));
         }
-
-        if (door != null)
-            closedDoorPosition = door.anchoredPosition;
     }
+
+    public void StartPuzzle()
+    {
+        if (AreAllPartsAligned()) return;
+        
+        Debug.Log("Puzzle start");
+        foreach (var handler in _startHandlers)
+        {
+            handler.OnPuzzleStart();
+        }
+    }
+
+    public void FinishPuzzle()
+    {
+        Debug.Log("Puzzle finish");
+        foreach (var handler in _finishHandlers)
+        {
+            handler.OnPuzzleFinish(IsUnlocked);
+        }
+    }
+    
+    private void PuzzleSolved()
+    {
+        unlocked = true;
+        FinishPuzzle();
+    }
+
+    #endregion
+
+    #region Compass Puzzle Logic
 
     private void RotateHeldPart(float deltaTime)
     {
@@ -139,8 +221,7 @@ public sealed class CompassPuzzle : MonoBehaviour
 
             if (AreAllPartsAligned())
             {
-                unlocked = true;
-                doorInteraction.OpenDoor();
+                PuzzleSolved();
             }
 
             return;
@@ -230,5 +311,13 @@ public sealed class CompassPuzzle : MonoBehaviour
     private static float GetValue(float[] values, int index, float fallback)
     {
         return values != null && index >= 0 && index < values.Length ? values[index] : fallback;
+    }
+
+    #endregion
+
+    public void Click()
+    {
+        Debug.Log("Clicked");
+        StartPuzzle();
     }
 }

@@ -5,7 +5,8 @@ namespace InputSystem.InputContexts
     public class ExplorationInputContext : MonoBehaviour, IInputContext
     {
         [SerializeField] private KnightMovement _player;
-        
+        private Collider2D[] _clickResults = new Collider2D[10];
+
         // base context
         public int Priority => 10;
         // block all inputs
@@ -35,14 +36,19 @@ namespace InputSystem.InputContexts
 
         private bool HandlePointerPress(ActionEvent actionEvent)
         {
-            // if (actionEvent.Phase != Phase.Started) return false;
-            //
-            // var coll = Physics2D.OverlapPoint(actionEvent.PointerWorldPos);
-            // if (!coll || !coll.TryGetComponent(out PuzzleInputContext puzzle)) return false;
-            //
-            // InputRouter.Push(puzzle);
-            Debug.Log("Pointer Click");
-            return true;
+            if (actionEvent.Phase != Phase.Started) return false;
+            
+            var size = Physics2D.OverlapPoint(actionEvent.PointerWorldPos, ContactFilter2D.noFilter, _clickResults);
+            for (int i = 0; i < size; i++)
+            {
+                var coll = _clickResults[i];
+                if (!coll || !coll.TryGetComponent(out IExplorationClickable clickable)) continue;
+                
+                clickable.Click();
+                return true;
+            }
+            
+            return false;
         }
 
         private bool HandleInteract(ActionEvent actionEvent)
@@ -58,5 +64,10 @@ namespace InputSystem.InputContexts
         }
 
         #endregion
+    }
+    
+    public interface IExplorationClickable
+    {
+        public void Click();
     }
 }
