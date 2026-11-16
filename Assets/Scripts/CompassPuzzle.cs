@@ -15,6 +15,7 @@ public sealed class CompassPuzzle : MonoBehaviour
     [SerializeField] private float[] startingZAngles = { 90f, 180f, 270f, 90f };
     [SerializeField] private float[] solvedZAngles = { 0f, 0f, 0f, 0f };
 
+
     [Header("Click Zones (outer to inner)")]
     [SerializeField] private float[] innerClickRadii = { 0.60f, 0.42f, 0.24f, 0f };
     [SerializeField] private float[] outerClickRadii = { 1f, 0.60f, 0.42f, 0.24f };
@@ -29,6 +30,9 @@ public sealed class CompassPuzzle : MonoBehaviour
     [SerializeField] private RectTransform door;
     [SerializeField] private float doorRiseDistance = 250f;
     [SerializeField, Min(0.01f)] private float doorRiseDuration = 0.75f;
+
+    [Header("Camera")]
+    [SerializeField] private PuzzleCameraController puzzleCamera;
 
     private Canvas parentCanvas;
     private bool[] partLocked;
@@ -100,6 +104,10 @@ public sealed class CompassPuzzle : MonoBehaviour
         heldPartIndex = -1;
         unlocked = false;
         AlignmentSoundPlayCount = 0;
+
+        if(puzzleCamera != null) {
+            puzzleCamera.Focus();
+        }
 
         for (int index = 0; index < partCount; index++)
         {
@@ -225,6 +233,10 @@ public sealed class CompassPuzzle : MonoBehaviour
         {
             if (partLocked == null || !partLocked[index] || !IsPartAligned(index))
                 return false;
+        }
+
+        if (puzzleCamera != null) {
+            puzzleCamera.Unfocus();
         }
 
         return true;
